@@ -1,0 +1,75 @@
+package com.aluracursos.screenmatchfrases;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import javax.persistence.*;
+
+@Entity
+@Table(name = "frases")
+public class Frase {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String titulo;
+    private String frase;
+    private String personaje;
+    private String poster;
+
+    // Getters y setters
+}
+
+@RestController
+class FraseController {
+    @Autowired
+    private FraseService service;
+
+    @GetMapping("/series/frases")
+    public FraseDTO obtenerFrases() {
+        return service.obtenerFraseAleatoria();
+    }
+}
+
+@Configuration
+class CorsConfiguration implements WebMvcConfigurer {
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/**")
+                .allowedOrigins("http://127.0.0.1:5501")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "TRACE", "CONNECT");
+    }
+}
+
+@Repository
+interface FraseRepository extends JpaRepository<Frase, Long> {
+    @Query(value = "SELECT f FROM Frase f ORDER BY function('RAND') LIMIT 1")
+    Frase obtenerFraseAleatoria();
+}
+
+@Service
+class FraseService {
+    @Autowired
+    private FraseRepository repository;
+
+    public FraseDTO obtenerFraseAleatoria() {
+        Frase frase = repository.obtenerFraseAleatoria();
+        return new FraseDTO(frase.getTitulo(), frase.getFrase(), frase.getPersonaje(), frase.getPoster());
+    }
+}
+
+@SpringBootApplication
+public class ScreenmatchFrasesApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(ScreenmatchFrasesApplication.class, args);
+    }
+}
