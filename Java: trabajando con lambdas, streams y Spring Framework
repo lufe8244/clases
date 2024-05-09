@@ -1,0 +1,87 @@
+package com.aluracursos.desafio.principal;
+
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import java.util.Comparator;
+import java.util.DoubleSummaryStatistics;
+import java.util.List;
+import java.util.Optional;
+import java.util.Scanner;
+import java.util.stream.Collectors;
+
+public class Principal {
+    private static final String URL_BASE = "https://gutendex.com/books/";
+    private final ConsumoAPI consumoAPI = new ConsumoAPI();
+    private final ConvierteDatos conversor = new ConvierteDatos();
+    private final Scanner teclado = new Scanner(System.in);
+
+    public void muestraElMenu() {
+        var json = consumoAPI.obtenerDatos(URL_BASE);
+        System.out.println(json);
+        var datos = conversor.obtenerDatos(json, Datos.class);
+        System.out.println(datos);
+
+        // Top 10 libros más descargados
+        System.out.println("Top 10 libros más descargados");
+        datos.resultados().stream()
+                .sorted(Comparator.comparing(DatosLibros::numeroDeDescargas).reversed())
+                .limit(10)
+                .map(l -> l.titulo().toUpperCase())
+                .forEach(System.out::println);
+
+        // Búsqueda de libros por nombre
+        System.out.println("Ingrese el nombre del libro que desea buscar");
+        var tituloLibro = teclado.nextLine();
+        json = consumoAPI.obtenerDatos(URL_BASE + "?search=" + tituloLibro.replace(" ", "+"));
+        var datosBusqueda = conversor.obtenerDatos(json, Datos.class);
+        Optional<DatosLibros> libroBuscado = datosBusqueda.resultados().stream()
+                .filter(l -> l.titulo().toUpperCase().contains(tituloLibro.toUpperCase()))
+                .findFirst();
+        if (libroBuscado.isPresent()) {
+            System.out.println("Libro Encontrado ");
+            System.out.println(libroBuscado.get());
+        } else {
+            System.out.println("Libro no encontrado");
+        }
+
+        // Trabajando con estadísticas
+        DoubleSummaryStatistics est = datos.resultados().stream()
+                .filter(d -> d.numeroDeDescargas() > 0)
+                .collect(Collectors.summarizingDouble(DatosLibros::numeroDeDescargas));
+        System.out.println("Cantidad media de descargas: " + est.getAverage());
+        System.out.println("Cantidad máxima de descargas: " + est.getMax());
+        System.out.println("Cantidad mínima de descargas: " + est.getMin());
+        System.out.println("Cantidad de registros evaluados para calcular las estadísticas: " + est.getCount());
+    }
+}
+
+class ConsumoAPI {
+    public String obtenerDatos(String url) {
+        // Implementación para obtener datos de la API
+        return ""; // Devuelve un JSON simulado
+    }
+}
+
+class ConvierteDatos {
+    public <T> T obtenerDatos(String json, Class<T> type) {
+        // Implementación para convertir JSON a objetos
+        return null; // Devuelve objetos simulados
+    }
+}
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+record Datos(@JsonAlias("results") List<DatosLibros> resultados) {}
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+record DatosLibros(
+        @JsonAlias("title") String titulo,
+        @JsonAlias("authors") List<DatosAutor> autor,
+        @JsonAlias("languages") List<String> idiomas,
+        @JsonAlias("download_count") Double numeroDeDescargas
+) {}
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+record DatosAutor(
+        @JsonAlias("name") String nombre,
+        @JsonAlias("birth_year") String fechaDeNacimiento
+) {}
